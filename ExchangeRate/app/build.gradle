@@ -69,6 +69,7 @@ dependencies {
     implementation "android.arch.lifecycle:extensions:$lifecycle"
     // Kotlin Coroutines
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines"
     // Retrofit
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
     // Moshi
