@@ -33,18 +33,24 @@ class RecyclerViewExchangeAdapter(
 
     class RecyclerViewExchangeViewHolder(view: View) : RecyclerView.ViewHolder(view) {
 
-        fun bind(cryptoModel: ExchangeRate, listener: Listener) {
-            itemView.recyclerview_rate_item_codeMTV.text = cryptoModel.code
-            itemView.recyclerview_rate_item_rateMTV.text = "${cryptoModel.rate}"
+        fun bind(exchangeRate: ExchangeRate, listener: Listener) {
+            itemView.recyclerview_rate_item_codeMTV.text = exchangeRate.code
+
+            if (exchangeRate.rate != null) {
+                itemView.recyclerview_rate_item_rateMTV.text = "${exchangeRate.rate}"
+            } else {
+                itemView.recyclerview_rate_item_rateMTV.text =
+                    itemView.resources.getString(R.string.base)
+            }
 
             itemView.setOnClickListener {
-                listener.onItemClick(cryptoModel)
+                listener.onItemClick(exchangeRate)
             }
         }
 
     }
 
     interface Listener {
-        fun onItemClick(cryptoModel: ExchangeRate)
+        fun onItemClick(exchangeRate: ExchangeRate)
     }
 }
