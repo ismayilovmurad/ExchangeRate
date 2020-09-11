@@ -15,7 +15,8 @@ import com.martiandeveloper.exchangerate.viewmodel.MainViewModel
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 
-class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.Listener {
+class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickListener,
+    RecyclerViewExchangeAdapter.CalculateClickListener {
 
     private var exchangeList = ArrayList<ExchangeRate>()
 
@@ -30,8 +31,6 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.Listener {
 
     private var scope = MainScope()
 
-    // private val tag = "MartianDeveloper"
-
     private lateinit var vm: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,8 +42,11 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.Listener {
         window.setBackgroundDrawableResource(R.drawable.background)
         setContentView(R.layout.activity_main)
         vm = getViewModel()
+        vm.list.value = exchangeList
         getViewModel()
         setRecyclerView()
+        setBase()
+        setValue()
         startUpdates()
         observe()
     }
@@ -61,46 +63,61 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.Listener {
     private fun setRecyclerView() {
         layoutManager = LinearLayoutManager(this)
         activity_main_mainRV.layoutManager = layoutManager
-        adapter = RecyclerViewExchangeAdapter(exchangeList, this@MainActivity)
+        adapter = RecyclerViewExchangeAdapter(vm.list.value!!, this@MainActivity, this@MainActivity)
         activity_main_mainRV.adapter = adapter
+    }
+
+    private fun setBase() {
+        if (vm.base.value == null) {
+            vm.base.value = "AZN"
+        }
+    }
+
+    private fun setValue() {
+        if (vm.value.value == null) {
+            vm.value.value = 1.0
+        }
     }
 
     private fun startUpdates() {
         scope.launch {
             while (true) {
-                val base = vm.base.value
-
-                if (base != null) {
-                    // Log.d(tag, "Base is not null we got $base")
-                    getData(base)
-                } else {
-                    // Log.d(tag, "Base is null we got AZN")
-                    getData("AZN")
-                }
-
+                getData()
                 delay(5000)
             }
         }
     }
 
-    private fun getData(base: String) {
+    private fun getData() {
         job = CoroutineScope(Dispatchers.IO + exceptionHandler).launch {
-            val response = MovieService.getClient().getExchanges(base)
+            if (vm.base.value != null) {
+                val response = MovieService.getClient().getExchanges(vm.base.value!!)
 
-            withContext(Dispatchers.Main) {
-                if (response.isSuccessful) {
-                    response.body()?.let {
-                        val list = ArrayList(it)
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        response.body()?.let {
+                            val list = ArrayList(it)
 
-                        exchangeList.clear()
-                        exchangeList.add(ExchangeRate(base, null))
-                        exchangeList.addAll(list)
+                            exchangeList.clear()
+                            exchangeList.add(ExchangeRate(vm.base.value!!, null))
 
-                        adapter?.notifyDataSetChanged()
+                            if (vm.value.value != 1.0) {
+                                for (i in 0 until list.size) {
+                                    exchangeList.add(
+                                        ExchangeRate(
+                                            list[i].code,
+                                            (list[i].rate!! * vm.value.value!!)
+                                        )
+                                    )
+                                }
+                            } else {
+                                exchangeList.addAll(list)
+                            }
 
-                        // Log.d(tag, "The data has updated")
+                            vm.list.value = exchangeList
 
-                        changeBackground()
+                            changeBackground()
+                        }
                     }
                 }
             }
@@ -116,14 +133,26 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.Listener {
 
     private fun observe() {
         vm.base.observe(this, {
-            getData(it)
+            getData()
+        })
+
+        vm.value.observe(this, {
+            getData()
+        })
+
+        vm.list.observe(this, {
+            adapter?.notifyDataSetChanged()
         })
     }
 
-    override fun onItemClick(exchangeRate: ExchangeRate) {
-        vm.base.value = exchangeRate.code
+    override fun onItemClick(code: String) {
+        vm.base.value = code
 
         activity_main_mainRV.scrollToPosition(0)
+    }
+
+    override fun onCalculateClick(value: Double) {
+        vm.value.value = value
     }
 
     override fun onDestroy() {
