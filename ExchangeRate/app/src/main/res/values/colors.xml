@@ -4,4 +4,6 @@
     <color name="colorPrimaryDark">#F7FAF8</color>
     <color name="colorAccent">#D0F0C0</color>
     <color name="colorOne">#1A211F2A</color> <!--10% of the colorPrimary-->
+    <color name="colorTwo">#43A047</color>
+    <color name="colorThree">#D32F2F</color>
 </resources>

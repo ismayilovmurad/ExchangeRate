@@ -1,16 +1,24 @@
 package com.martiandeveloper.exchangerate.view
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.os.Bundle
 import android.os.Handler
 import androidx.appcompat.app.AppCompatActivity
+import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.martiandeveloper.exchangerate.R
 import com.martiandeveloper.exchangerate.adapter.RecyclerViewExchangeAdapter
+import com.martiandeveloper.exchangerate.databinding.ActivityMainBinding
 import com.martiandeveloper.exchangerate.model.ExchangeRate
 import com.martiandeveloper.exchangerate.service.MovieService
+import com.martiandeveloper.exchangerate.utils.NetworkUtils
+import com.martiandeveloper.exchangerate.utils.getColorRes
+import com.martiandeveloper.exchangerate.utils.hide
+import com.martiandeveloper.exchangerate.utils.show
 import com.martiandeveloper.exchangerate.viewmodel.MainViewModel
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
@@ -33,6 +41,12 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
 
     private lateinit var vm: MainViewModel
 
+    private lateinit var binding: ActivityMainBinding
+
+    private val updateInterval: Long = 5000
+    private val backgroundMillis: Long = 500
+    private val animationDuration: Long = 2000
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initUI()
@@ -40,7 +54,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
 
     private fun initUI() {
         window.setBackgroundDrawableResource(R.drawable.background)
-        setContentView(R.layout.activity_main)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         vm = getViewModel()
         vm.list.value = exchangeList
         getViewModel()
@@ -49,6 +63,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
         setValue()
         startUpdates()
         observe()
+        handleNetworkChanges()
     }
 
     private fun getViewModel(): MainViewModel {
@@ -69,13 +84,13 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
 
     private fun setBase() {
         if (vm.base.value == null) {
-            vm.base.value = "AZN"
+            vm.base.value = getString(R.string.default_exchange)
         }
     }
 
     private fun setValue() {
         if (vm.value.value == null) {
-            vm.value.value = 1.0
+            vm.value.value = getString(R.string.default_value).toDouble()
         }
     }
 
@@ -83,7 +98,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
         scope.launch {
             while (true) {
                 getData()
-                delay(5000)
+                delay(updateInterval)
             }
         }
     }
@@ -101,7 +116,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
                             exchangeList.clear()
                             exchangeList.add(ExchangeRate(vm.base.value!!, null))
 
-                            if (vm.value.value != 1.0) {
+                            if (vm.value.value != getString(R.string.default_value).toDouble()) {
                                 for (i in 0 until list.size) {
                                     exchangeList.add(
                                         ExchangeRate(
@@ -128,7 +143,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
         window.setBackgroundDrawableResource(R.drawable.background2)
         Handler().postDelayed({
             window.setBackgroundDrawableResource(R.drawable.background)
-        }, 500)
+        }, backgroundMillis)
     }
 
     private fun observe() {
@@ -142,6 +157,33 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
 
         vm.list.observe(this, {
             adapter?.notifyDataSetChanged()
+        })
+    }
+
+    private fun handleNetworkChanges() {
+        NetworkUtils.getNetworkLiveData(applicationContext).observe(this, { isConnected ->
+            if (!isConnected) {
+                binding.network = getString(R.string.no_connection)
+                binding.activityMainNetworkFL.apply {
+                    show()
+                    setBackgroundColor(getColorRes(R.color.colorThree))
+                }
+            } else {
+                binding.network = getString(R.string.back_online)
+                binding.activityMainNetworkFL.apply {
+                    setBackgroundColor(getColorRes(R.color.colorTwo))
+
+                    animate()
+                        .alpha(1f)
+                        .setStartDelay(animationDuration)
+                        .setDuration(animationDuration)
+                        .setListener(object : AnimatorListenerAdapter() {
+                            override fun onAnimationEnd(animation: Animator?) {
+                                hide()
+                            }
+                        })
+                }
+            }
         })
     }
 

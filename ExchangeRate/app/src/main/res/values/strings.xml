@@ -1,4 +1,8 @@
 <resources>
-    <string name="app_name">Exchange Rate</string>
+    <string name="app_name">Exchange</string>
     <string name="value">Value</string>
+    <string name="no_connection">No connection</string>
+    <string name="back_online">Back online</string>
+    <string name="default_exchange">AZN</string>
+    <string name="default_value">1.0</string>
 </resources>
