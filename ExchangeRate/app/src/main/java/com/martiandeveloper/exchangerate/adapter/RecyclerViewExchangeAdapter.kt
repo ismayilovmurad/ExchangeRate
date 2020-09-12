@@ -20,7 +20,7 @@ class RecyclerViewExchangeAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(exchangeRate: ExchangeRate, calculateClickListener: CalculateClickListener) {
 
-            binding.code = exchangeRate.code
+            binding.code = exchangeRate.exchangeCode
 
             binding.executePendingBindings()
 
@@ -38,13 +38,13 @@ class RecyclerViewExchangeAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(exchangeRate: ExchangeRate, itemClickListener: ItemClickListener) {
 
-            binding.code = exchangeRate.code
-            binding.rate = "${exchangeRate.rate}"
+            binding.code = exchangeRate.exchangeCode
+            binding.rate = "${exchangeRate.exchangeRate}"
 
             binding.executePendingBindings()
 
             itemView.setOnClickListener {
-                itemClickListener.onItemClick(exchangeRate.code)
+                itemClickListener.onItemClick(exchangeRate.exchangeCode)
             }
         }
     }
@@ -110,5 +110,11 @@ class RecyclerViewExchangeAdapter(
 
     interface CalculateClickListener {
         fun onCalculateClick(value: Double)
+    }
+
+    fun updateCountryList(newCountryList: List<ExchangeRate>) {
+        exchangeList.clear()
+        exchangeList.addAll(newCountryList)
+        notifyDataSetChanged()
     }
 }

@@ -6,9 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.martiandeveloper.exchangerate.R
 import com.martiandeveloper.exchangerate.adapter.RecyclerViewExchangeAdapter
@@ -47,6 +45,8 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
     private val backgroundMillis: Long = 500
     private val animationDuration: Long = 2000
 
+    private var hasConnection = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initUI()
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
         window.setBackgroundDrawableResource(R.drawable.background)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         vm = getViewModel()
-        vm.list.value = exchangeList
+        vm.exchangeList.value = exchangeList
         getViewModel()
         setRecyclerView()
         setBase()
@@ -67,18 +67,17 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
     }
 
     private fun getViewModel(): MainViewModel {
-        return ViewModelProviders.of(this, object : ViewModelProvider.Factory {
-            override fun <T : ViewModel?> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return MainViewModel() as T
-            }
-        })[MainViewModel::class.java]
+        return ViewModelProvider(this).get(MainViewModel::class.java)
     }
 
     private fun setRecyclerView() {
         layoutManager = LinearLayoutManager(this)
         activity_main_mainRV.layoutManager = layoutManager
-        adapter = RecyclerViewExchangeAdapter(vm.list.value!!, this@MainActivity, this@MainActivity)
+        adapter = RecyclerViewExchangeAdapter(
+            vm.exchangeList.value!!,
+            this@MainActivity,
+            this@MainActivity
+        )
         activity_main_mainRV.adapter = adapter
     }
 
@@ -120,8 +119,8 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
                                 for (i in 0 until list.size) {
                                     exchangeList.add(
                                         ExchangeRate(
-                                            list[i].code,
-                                            (list[i].rate!! * vm.value.value!!)
+                                            list[i].exchangeCode,
+                                            (list[i].exchangeRate!! * vm.value.value!!)
                                         )
                                     )
                                 }
@@ -129,7 +128,7 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
                                 exchangeList.addAll(list)
                             }
 
-                            vm.list.value = exchangeList
+                            vm.exchangeList.value = exchangeList
 
                             changeBackground()
                         }
@@ -155,20 +154,40 @@ class MainActivity : AppCompatActivity(), RecyclerViewExchangeAdapter.ItemClickL
             getData()
         })
 
-        vm.list.observe(this, {
-            adapter?.notifyDataSetChanged()
+        vm.exchangeList.observe(this, {
+            if (!it.isNullOrEmpty()) {
+                if (hasConnection) {
+                    // We have a internet connection, so we don't have to change the list, we're gonna just notify the adapter.
+                    adapter?.notifyDataSetChanged()
+                } else {
+                    adapter?.updateCountryList(it)
+                }
+            }
         })
     }
 
     private fun handleNetworkChanges() {
         NetworkUtils.getNetworkLiveData(applicationContext).observe(this, { isConnected ->
             if (!isConnected) {
+                hasConnection = false
                 binding.network = getString(R.string.no_connection)
                 binding.activityMainNetworkFL.apply {
                     show()
                     setBackgroundColor(getColorRes(R.color.colorThree))
                 }
+
+                if (vm.exchangeList.value!!.size == 0) {
+                    // The list is empty which means the user opens the app for the first time.
+                    // So, we're getting data from the SQLite.
+                    vm.getDataFromSQLite()
+                } else {
+                    // The list is not empty which means internet connection has gone while the user in the app.
+                    // So, we're saving the latest data in the SQLite.
+                    vm.storeInSQLite(vm.exchangeList.value!!)
+                }
+
             } else {
+                hasConnection = true
                 binding.network = getString(R.string.back_online)
                 binding.activityMainNetworkFL.apply {
                     setBackgroundColor(getColorRes(R.color.colorTwo))
