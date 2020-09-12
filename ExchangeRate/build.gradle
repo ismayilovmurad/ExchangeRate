@@ -64,6 +64,8 @@ ext {
     moshi = "1.9.3"
     // Retrofit converter Moshi
     converter_moshi = "2.6.2"
+    // Room
+    room = "2.2.5"
 }
 
 task clean(type: Delete) {

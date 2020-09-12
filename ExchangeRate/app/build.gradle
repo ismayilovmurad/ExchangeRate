@@ -82,8 +82,8 @@ dependencies {
     implementation "com.squareup.moshi:moshi-kotlin:$moshi"
     // Retrofit converter Moshi
     implementation "com.squareup.retrofit2:converter-moshi:$converter_moshi"
-
-    implementation "androidx.room:room-runtime:2.2.5"
-    kapt "androidx.room:room-compiler:2.2.5"
-    implementation "androidx.room:room-ktx:2.2.5"
+    // Room
+    implementation "androidx.room:room-runtime:$room"
+    kapt "androidx.room:room-compiler:$room"
+    implementation "androidx.room:room-ktx:$room"
 }
